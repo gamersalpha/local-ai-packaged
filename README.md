@@ -18,7 +18,7 @@ The new installation process is fully automated thanks to the included Python se
 
 ### 1️⃣ Clone the repository
 ```bash
-git clone -b stable https://github.com/coleam00/local-ai-packaged.git
+git clone -b stable https://https://github.com/gamersalpha/local-ai-packaged/
 cd local-ai-packaged
 ```
 
