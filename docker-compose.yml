@@ -35,11 +35,12 @@ x-ollama: &service-ollama
   restart: unless-stopped
   expose:
     - 11434/tcp
-  environment:
-    - OLLAMA_CONTEXT_LENGTH=8192
-    - OLLAMA_FLASH_ATTENTION=1
-    - OLLAMA_KV_CACHE_TYPE=q8_0
-    - OLLAMA_MAX_LOADED_MODELS=2
+  #environment:
+  #  - OLLAMA_CONTEXT_LENGTH=8192
+  #  - OLLAMA_FLASH_ATTENTION=1
+  #  - OLLAMA_KV_CACHE_TYPE=q8_0
+  #  - OLLAMA_MAX_LOADED_MODELS=2
+  #  - OLLAMA_NUM_THREADS=14   
   volumes:
     - ollama_storage:/root/.ollama
 
@@ -72,14 +73,29 @@ services:
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
-    restart: unless-stopped
     container_name: open-webui
-    expose:
+    restart: unless-stopped
+    expose: 
       - 8080/tcp
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - open-webui:/app/backend/data
+    environment:
+      # === RAG / Web search (ton paramétrage actuel)
+      ENABLE_RAG_WEB_SEARCH: True
+      RAG_WEB_SEARCH_ENGINE: "searxng"
+      RAG_WEB_SEARCH_RESULT_COUNT: 3
+      RAG_WEB_SEARCH_CONCURRENT_REQUESTS: 10
+      SEARXNG_QUERY_URL: "http://searxng:8080/search?q=<query>&format=json"
+
+
+      # === Ollama integration ===
+      ENABLE_OLLAMA: True
+      OLLAMA_API_BASE_URL: "http://ollama:11434"
+
+      # Optionnel : définir le modèle par défaut
+      DEFAULT_MODEL: "llama3.1"
 
   n8n-import:
     <<: *service-n8n
@@ -130,42 +146,42 @@ services:
         - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
     restart: always
 
-  caddy:
-    container_name: caddy
-    image: docker.io/library/caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - 80:80/tcp
-      - 443:443/tcp
-    expose:
-      - 2019/tcp
-      - 443/tcp
-      - 443/udp
-      - 80/tcp
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./caddy-addon:/etc/caddy/addons:ro
-      - caddy-data:/data:rw
-      - caddy-config:/config:rw
-    environment:
-      - N8N_HOSTNAME=${N8N_HOSTNAME:-":8001"}
-      - WEBUI_HOSTNAME=${WEBUI_HOSTNAME:-":8002"}
-      - FLOWISE_HOSTNAME=${FLOWISE_HOSTNAME:-":8003"}
-      - OLLAMA_HOSTNAME=${OLLAMA_HOSTNAME:-":8004"}
-      - SUPABASE_HOSTNAME=${SUPABASE_HOSTNAME:-":8005"}
-      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-":8006"}
-      - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME:-":8007"}
-      - NEO4J_HOSTNAME=${NEO4J_HOSTNAME:-":8008"}
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-internal}
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_BIND_SERVICE
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "1m"
-        max-file: "1"
+#   caddy:
+#     container_name: caddy
+#     image: docker.io/library/caddy:2-alpine
+#     restart: unless-stopped
+#     ports:
+#       - 80:80/tcp
+#       - 443:443/tcp
+#     expose:
+#       - 2019/tcp
+#       - 443/tcp
+#       - 443/udp
+#       - 80/tcp
+#     volumes:
+#       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+#       - ./caddy-addon:/etc/caddy/addons:ro
+#       - caddy-data:/data:rw
+#       - caddy-config:/config:rw
+#     environment:
+#       - N8N_HOSTNAME=${N8N_HOSTNAME:-":8001"}
+#       - WEBUI_HOSTNAME=${WEBUI_HOSTNAME:-":8002"}
+#       - FLOWISE_HOSTNAME=${FLOWISE_HOSTNAME:-":8003"}
+#       - OLLAMA_HOSTNAME=${OLLAMA_HOSTNAME:-":8004"}
+#       - SUPABASE_HOSTNAME=${SUPABASE_HOSTNAME:-":8005"}
+#       - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-":8006"}
+#       - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME:-":8007"}
+#       - NEO4J_HOSTNAME=${NEO4J_HOSTNAME:-":8008"}
+#       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-internal}
+#     cap_drop:
+#       - ALL
+#     cap_add:
+#       - NET_BIND_SERVICE
+#     logging:
+#       driver: "json-file"
+#       options:
+#         max-size: "1m"
+#         max-file: "1"
 
   langfuse-worker:
     image: langfuse/langfuse-worker:3
@@ -341,6 +357,10 @@ services:
       - ./searxng:/etc/searxng:rw
     environment:
       - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
+      - BASE_URL=${SEARXNG_HOSTNAME}
+      - INSTANCE_NAME=Mon SearXNG
+      - SEARXNG_TRUSTED_PROXIES=172.16.0.0/12,192.168.0.0/16,10.0.0.0/8
+      - TZ=Europe/Paris
       - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}
       - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
     cap_drop:
@@ -383,6 +403,33 @@ services:
     <<: *init-ollama
     depends_on:
       - ollama-cpu
+    environment:
+      # 🧠 Taille maximale du contexte (mémoire conversationnelle)
+      # Bon équilibre entre contexte long et performance CPU
+      - OLLAMA_CONTEXT_LENGTH=8192
+
+      # ⚡ Désactive Flash Attention (utile uniquement sur GPU, ralentit sur CPU)
+      - OLLAMA_FLASH_ATTENTION=0
+
+      # 🧩 Type de cache pour accélérer les réponses
+      # q4_0 = plus rapide et léger pour CPU-only
+      - OLLAMA_KV_CACHE_TYPE=q4_0
+
+      # 🚀 Nombre de modèles à garder chargés simultanément
+      # 2 = permet de basculer entre deux modèles sans rechargement
+      - OLLAMA_MAX_LOADED_MODELS=2
+
+      # ⚙️ Nombre de threads utilisés par Ollama
+      # Optimal sur ton i7-12650H (16 threads logiques)
+      - OLLAMA_NUM_THREADS=10
+
+      # 💾 Taille du batch = nombre de tokens traités simultanément
+      # Plus haut = un peu plus rapide, consomme un peu plus de RAM
+      - OLLAMA_BATCH_SIZE=512
+
+      # 💤 Garde le modèle en mémoire pendant 5 min après usage
+      # Évite le temps de rechargement entre deux appels
+      - OLLAMA_KEEP_ALIVE=5m      
 
   ollama-pull-llama-gpu:
     profiles: ["gpu-nvidia"]
