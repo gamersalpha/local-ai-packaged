@@ -1,8 +1,27 @@
+# === Environnements ===
 .env
+.env.test
+
+# === Données et volumes Docker ===
 volumes/
 shared/
-neo4j/
 shared-backup/
-.env.test
+neo4j/
+supabase/           # 🧩 auto-cloned Supabase stack (managed by start_services.py)
+
+# === Fichiers générés / cache ===
+__pycache__/
+*.pyc
+*.log
+
+# === Fichiers SearXNG spécifiques ===
 searxng/settings.yml
 searxng/uwsgi*
+
+# === Fichiers système ===
+.DS_Store
+Thumbs.db
+
+# === Environnements Python locaux ===
+.venv/
+venv/
