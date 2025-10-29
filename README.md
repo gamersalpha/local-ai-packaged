@@ -1,154 +1,154 @@
-# Self-hosted AI Package
+# 🧠 Local AI Packaged — Installation et utilisation
 
-**Self-hosted AI Package** is an open, Docker Compose–based template that bootstraps a fully featured Local AI and Low Code development environment — including Ollama for local LLMs, Open WebUI for an interface to chat with your n8n agents, and Supabase for database, vector store, and authentication.
+**Local AI Packaged** est une stack tout‑en‑un pour héberger un environnement complet d’IA locale :  
+Ollama (LLMs), Open WebUI, Flowise, n8n, Supabase, Langfuse, Neo4j, Qdrant, et plus encore — le tout orchestré via Docker Compose.
 
-This version extends Cole’s setup with major improvements and **automation scripts** for a cleaner deployment workflow — including Supabase, Open WebUI, Flowise, Neo4j, Langfuse, SearXNG, and optional Caddy integration.
-
-If you use this version, all local RAG AI Agent workflows from the demo video will be automatically included in your n8n instance.
-
-> ⚠️ **Note:** Supabase updated some environment variables.  
-> If you had this project running before June 14th, add the following to your `.env`:
-> ```bash
-> POOLER_DB_POOL_SIZE=5
-> ```
+Ce projet est conçu pour les **auto‑hébergeurs techniques** souhaitant déployer leur propre infrastructure IA sur un serveur local (NAS, mini‑PC, ou machine dédiée).
 
 ---
 
-## 🧩 Installation (Simplified & Automated)
+## ⚙️ 1. Prérequis
 
-The installation process is now fully automated via the included Python setup scripts.
+Avant de commencer, assurez‑vous d’avoir :
 
-### 1️⃣ Clone the repository
+- 🐳 **Docker** et **Docker Compose** installés  
+- 🐍 **Python 3.8+**  
+- 💾 **Git**  
+- 💡 Environ **16 Go de RAM** minimum recommandés
+
+### GPU (optionnel)
+
+- **NVIDIA :** [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)  
+- **AMD :** ROCm configuré  
+- **CPU uniquement :** fonctionne aussi, plus lentement
+
+---
+
+## 🚀 2. Installation rapide
+
+### ① Cloner le dépôt
+
 ```bash
 git clone https://github.com/gamersalpha/local-ai-packaged.git
 cd local-ai-packaged
 ```
 
-### 2️⃣ Generate your environment file automatically
+### ② Générer le fichier `.env` automatiquement
 
-You no longer need to manually edit `.env` — the `generate_env.py` script will:
-
-- Generate all required environment variables  
-- Create secure random passwords and API keys  
-- Detect your GPU (NVIDIA / AMD / CPU)  
-- Configure correct local paths  
-
-Run this for a full setup:
+Le script `generate_env.py` crée automatiquement toutes les variables nécessaires :  
+- mots de passe et clés aléatoires  
+- détection du GPU (NVIDIA / AMD / CPU)  
+- chemins locaux corrects
 
 ```bash
 python3 generate_env.py --yes --regen-sensitive --docker
 ```
 
-This will:
-- Create `.env`
-- Detect your GPU profile
-- Build and start all Docker services automatically
-- Display access URLs like:
-  ```
-  🌐 Services:
-    🧠 Ollama      : http://192.168.1.42:11434
-    ⚙️  n8n         : http://192.168.1.42:5678
-    💬 OpenWebUI   : http://192.168.1.42:8080
-    🧱 Supabase    : http://192.168.1.42:54323
-  ```
+Une fois terminé, le script affiche les URLs locales de vos services :
 
----
-
-### 3️⃣ Manual `.env` generation (optional)
-If you prefer to create the `.env` without launching Docker yet:
-```bash
-python3 generate_env.py --yes --regen-sensitive
+```
+🌐 Services disponibles :
+  🧠 Ollama      : http://192.168.1.42:11434
+  ⚙️ n8n          : http://192.168.1.42:5678
+  💬 Open WebUI  : http://192.168.1.42:8080
+  🧱 Supabase    : http://192.168.1.42:54323
 ```
 
 ---
 
-## 🚀 Start, Update, and Manage the Stack
+## 🧩 3. Lancer et gérer les services
 
-### ▶️ Start services automatically
-Use the new **`start_services.py`** to launch the full stack interactively:
+### ▶️ Démarrage automatisé
+
+Le script `start_services.py` orchestre tout le déploiement :  
+- vérifie ou crée le `.env`  
+- clone automatiquement la stack Docker de **Supabase**  
+- (dés)active Caddy si besoin  
+- génère la clé SearXNG  
+- démarre tous les conteneurs dans le bon ordre
 
 ```bash
-python3 start_services.py [options]
+python3 start_services.py --profile cpu
 ```
 
-#### Available options
+#### Options disponibles
 
 | Option | Description |
 |--------|--------------|
-| `--profile [cpu|gpu-nvidia|gpu-amd|none]` | Hardware profile to use (default: `cpu`). |
-| `--environment [private|public]` | Deployment mode (default: `private`). |
-| `--no-supabase` | Skip Supabase (comments include line). |
-| `--no-caddy` | Skip Caddy (comments service block). |
-| `--update` | Pull the latest Docker images before launch. |
-| `--dry-run` | Preview configuration without starting containers. |
+| `--profile [cpu|gpu-nvidia|gpu-amd]` | Choix du profil matériel |
+| `--environment [private|public]` | Mode de déploiement |
+| `--no-supabase` | Désactive Supabase |
+| `--no-caddy` | Désactive Caddy |
+| `--update` | Tire les dernières images Docker |
+| `--dry-run` | Simule le lancement sans exécuter Docker |
 
-#### Examples
+Exemples :
 
 ```bash
-# CPU-only stack
+# Lancement CPU
 python3 start_services.py --profile cpu
 
-# GPU (NVIDIA)
+# Lancement GPU (NVIDIA)
 python3 start_services.py --profile gpu-nvidia
 
-# Skip Supabase and Caddy
-python3 start_services.py --no-supabase --no-caddy
-
-# Dry-run (no Docker actions)
-python3 start_services.py --dry-run
-
-# Update images before starting
+# Mise à jour avant lancement
 python3 start_services.py --update
 ```
 
-💡 **Features**
-- Auto-generates `.env` if missing  
-- Clones Supabase Docker stack automatically  
-- Toggles Supabase and Caddy in `docker-compose.yml`  
-- Generates secure SearXNG secret key  
-- Stops existing containers cleanly before redeploy  
-- Launches Supabase → then Local AI stack in the correct order  
-
 ---
 
-### ♻️ Update all services easily
+### ♻️ Mettre à jour la stack
 
-Use the **`update_services.sh`** script to refresh every container and restart cleanly:
+Utilisez le script `update_services.sh` pour tout rafraîchir automatiquement :
 
 ```bash
 ./update_services.sh
 ```
 
-This script:
-1. Stops all containers  
-2. Pulls the latest images  
-3. Relaunches the stack with your profile (default: CPU)  
-
-To adapt for GPU:
-```bash
-docker compose -p localai -f docker-compose.yml --profile gpu-nvidia down
-docker compose -p localai -f docker-compose.yml --profile gpu-nvidia pull
-python3 start_services.py --profile gpu-nvidia --no-caddy
-```
+Ce script :
+1. stoppe tous les conteneurs  
+2. tire les nouvelles images Docker  
+3. redémarre la stack via `start_services.py`
 
 ---
 
-## 🧠 What’s included
+## 🌍 4. Accès aux interfaces
 
-✅ [**n8n**](https://n8n.io/) – workflow automation  
-✅ [**Supabase**](https://supabase.com/) – database, auth & storage  
-✅ [**Ollama**](https://ollama.com/) – local LLM runtime  
-✅ [**Open WebUI**](https://openwebui.com/) – chat interface  
-✅ [**Flowise**](https://flowiseai.com/) – low-code AI pipeline builder  
-✅ [**Qdrant**](https://qdrant.tech/) – vector store  
-✅ [**Neo4j**](https://neo4j.com/) – graph database  
-✅ [**SearXNG**](https://searxng.org/) – web search for RAG  
-✅ [**Langfuse**](https://langfuse.com/) – LLM tracing & analytics  
-✅ [**Caddy**](https://caddyserver.com/) – reverse proxy (optional)  
+| Service | Description | URL locale par défaut |
+|----------|--------------|-----------------------|
+| **n8n** | Workflow automation | http://192.168.1.42:5678 |
+| **Open WebUI** | Interface de chat LLM | http://192.168.1.42:8080 |
+| **Ollama** | API locale des modèles | http://192.168.1.42:11434 |
+| **Flowise** | Concepteur de pipelines IA | http://192.168.1.42:3001 |
+| **Supabase** | Base de données et auth | http://192.168.1.42:54323 |
+| **Langfuse** | Suivi des appels LLM | http://192.168.1.42:3000 |
+| **SearXNG** | Recherche web RAG | http://192.168.1.42:8080 |
+| **Neo4j** | Base graphe | http://192.168.1.42:7474 |
+
+*(Adaptez les IP selon votre réseau local)*
 
 ---
 
-## 🧾 Project Structure
+## 🛠️ 5. Dépannage rapide
+
+### Supabase ne démarre pas ?
+- Vérifiez que le dossier `supabase/` a bien été créé automatiquement.  
+- Supprimez‑le et relancez : `python3 start_services.py --no-caddy`  
+- Si besoin, ajoutez dans `.env` : `POOLER_DB_POOL_SIZE=5`
+
+### GPU non détecté ?
+- Vérifiez que le **NVIDIA Container Toolkit** ou **ROCm** est bien installé.  
+- Vous pouvez toujours démarrer en mode CPU :  
+  ```bash
+  python3 start_services.py --profile cpu
+  ```
+
+### Ports déjà utilisés ?
+Modifiez les ports directement dans `docker-compose.yml` avant de relancer.
+
+---
+
+## 🧾 Structure du projet
 
 ```
 .
@@ -156,7 +156,7 @@ python3 start_services.py --profile gpu-nvidia --no-caddy
 ├── start_services.py
 ├── update_services.sh
 ├── generate_env.py
-├── supabase/           # auto-cloned stack (ignored by Git)
+├── supabase/           # auto-cloné par start_services.py (ignoré par Git)
 ├── n8n/
 │   └── backup/
 ├── searxng/
@@ -164,23 +164,16 @@ python3 start_services.py --profile gpu-nvidia --no-caddy
 └── neo4j/
 ```
 
-> 📝 **Note:** The `supabase/` folder is automatically cloned by `start_services.py` from the official [Supabase repo](https://github.com/supabase/supabase) and should **not** be versioned.  
-> Ensure it’s listed in `.gitignore`.
+> 📘 Le dossier `supabase/` est généré automatiquement et **ne doit pas être versionné**.  
+> Il est déjà listé dans `.gitignore`.
 
 ---
 
-## 🧠 Quick Access
+## 📜 Licence
 
-- n8n → http://localhost:5678  
-- Open WebUI → http://localhost:8080  
-- Ollama API → http://localhost:11434  
-- Supabase → http://localhost:54323  
-- Flowise → http://localhost:3001  
-- Langfuse → http://localhost:3000  
+Sous licence **Apache 2.0**.  
+Voir [LICENSE](LICENSE) pour plus d’informations.
 
 ---
 
-## 📜 License
-
-Licensed under the Apache License 2.0.  
-See [LICENSE](LICENSE) for details.
+**Créé avec ❤️ pour la communauté auto‑hébergeuse.**
