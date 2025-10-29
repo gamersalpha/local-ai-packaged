@@ -207,9 +207,35 @@ def start_local_ai(profile=None, environment=None):
     cmd.extend(["up", "-d"])
     run_command(cmd)
 
+def clone_supabase_repo():
+    """Clone the Supabase repository using sparse checkout if not already present."""
+    if not os.path.exists("supabase"):
+        print("Cloning the Supabase repository...")
+        run_command([
+            "git", "clone", "--filter=blob:none", "--no-checkout",
+            "https://github.com/supabase/supabase.git"
+        ])
+        os.chdir("supabase")
+        run_command(["git", "sparse-checkout", "init", "--cone"])
+        run_command(["git", "sparse-checkout", "set", "docker"])
+        run_command(["git", "checkout", "master"])
+        os.chdir("..")
+    else:
+        print("Supabase repository already exists, updating...")
+        os.chdir("supabase")
+        run_command(["git", "pull"])
+        os.chdir("..")
+def prepare_supabase_env():
+    """Copy .env from root to supabase/docker/.env."""
+    src = ".env"
+    dst = os.path.join("supabase", "docker", ".env")
+    if os.path.exists(src):
+        print("📄 Copying root .env → supabase/docker/.env ...")
+        shutil.copyfile(src, dst)
+    else:
+        print("⚠️ No .env found at root. Supabase will fail without it.")
 
 # ---------------------- MAIN ---------------------- #
-
 def main():
     parser = argparse.ArgumentParser(
         description="Start, update, or preview the Supabase + Local AI stack.",
@@ -232,6 +258,17 @@ def main():
 
     args = parser.parse_args()
 
+    # 🪄 1️⃣ Cloner Supabase si besoin
+    if not args.no_supabase:
+        if not os.path.exists("supabase/docker/docker-compose.yml"):
+            print("🧩 Supabase stack not found locally. Cloning it from GitHub...")
+            clone_supabase_repo()
+        else:
+            print("✅ Supabase stack already present.")
+        prepare_supabase_env()
+
+
+    # 🧩 2️⃣ Vérifier le fichier .env
     env_exists = os.path.exists(".env")
 
     print("\n==============================")
@@ -253,17 +290,20 @@ def main():
     if not env_exists:
         check_or_generate_env()
 
+    # 🧩 3️⃣ Modifier docker-compose.yml selon les options
     toggle_supabase_include(disable_supabase=args.no_supabase)
     toggle_caddy_service(disable_caddy=args.no_caddy)
 
+    # 🧠 4️⃣ Confirmation avant lancement
     confirm("Proceed with deployment?")
 
+    # 🔑 5️⃣ Génération clé SearXNG
     generate_searxng_secret_key()
 
-    # 🧹 Stop containers first
+    # 🧹 6️⃣ Stopper les conteneurs existants
     stop_existing_containers(args.profile)
 
-    # 🔄 Option: update all container images
+    # ⬇️ 7️⃣ Option : mise à jour des images
     if args.update:
         print("⬇️ Pulling latest container images...")
         try:
@@ -277,8 +317,25 @@ def main():
         except subprocess.CalledProcessError:
             print("⚠️  Failed to pull one or more images, continuing with existing ones.")
 
-    # 🚀 Restart stack
+    # 🚀 8️⃣ Démarrage des stacks
+    if not args.no_supabase:
+        print("\n🧱 Starting Supabase stack first...")
+        try:
+            cmd = [
+                "docker", "compose", "-p", "localai",
+                "-f", "supabase/docker/docker-compose.yml", "up", "-d"
+            ]
+            run_command(cmd)
+            print("✅ Supabase started successfully.")
+        except subprocess.CalledProcessError:
+            print("⚠️  Could not start Supabase stack, continuing with Local AI services only.")
+
+        print("⏳ Waiting 10 seconds for Supabase to initialize...")
+        time.sleep(10)
+
+    # 🚀 9️⃣ Démarrage du stack Local AI
     start_local_ai(args.profile, args.environment)
+
     print("\n✅ Deployment complete!")
 
 
