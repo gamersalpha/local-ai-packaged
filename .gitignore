@@ -25,3 +25,6 @@ Thumbs.db
 # === Environnements Python locaux ===
 .venv/
 venv/
+
+# === IDE / AI tools ===
+.claude/

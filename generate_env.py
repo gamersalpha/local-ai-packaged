@@ -27,6 +27,9 @@ from getpass import getpass
 # Config et helpers
 # -------------------------
 SENSITIVE_REGEX = re.compile(r"(PASS(word)?|SECRET|KEY|TOKEN|JWT|SALT|AUTH|ACCESS)", re.IGNORECASE)
+# Variables that match SENSITIVE_REGEX but should NOT be treated as secrets
+# Variables that match SENSITIVE_REGEX but need special handling (not random A-Z/0-9/!?)
+SENSITIVE_EXCLUDE = {"NEO4J_AUTH", "REDIS_AUTH", "ENCRYPTION_KEY"}
 VAR_LINE_RE = re.compile(r"^([A-Za-z0-9_]+)=(.*)$")
 
 ALLOWED_SPECIAL = "!?"
@@ -101,7 +104,7 @@ def run_command(cmd):
 
 
 def prompt_for(varname, current_value, auto_accept=False, regen_sensitive=False, secret_length=32):
-    sensitive = SENSITIVE_REGEX.search(varname) is not None
+    sensitive = SENSITIVE_REGEX.search(varname) is not None and varname not in SENSITIVE_EXCLUDE
 
     if auto_accept:
         if sensitive and regen_sensitive:
@@ -136,6 +139,45 @@ def prompt_for(varname, current_value, auto_accept=False, regen_sensitive=False,
             ans = input(f"{varname} (défaut: '{current_value}'). Entrée => garder, sinon taper nouvelle valeur: ")
             return ans or current_value
         return input(f"{varname} (pas de défaut). Saisir valeur ou laisser vide: ")
+
+
+# -------------------------
+# Domain expansion
+# -------------------------
+SERVICE_SUBDOMAIN_DEFAULTS = {
+    "N8N_HOSTNAME": "n8n",
+    "WEBUI_HOSTNAME": "openwebui",
+    "FLOWISE_HOSTNAME": "flowise",
+    "SUPABASE_HOSTNAME": "supabase",
+    "LANGFUSE_HOSTNAME": "langfuse",
+    "NEO4J_HOSTNAME": "neo4j",
+    "SEARXNG_HOSTNAME": "searxng",
+    "OLLAMA_HOSTNAME": "ollama",
+}
+
+
+def expand_hostnames(env_lines):
+    """If BASE_DOMAIN is set and individual hostnames are not, derive them."""
+    env_dict = {}
+    for line in env_lines:
+        m = VAR_LINE_RE.match(line.strip())
+        if m:
+            env_dict[m.group(1)] = m.group(2)
+
+    base_domain = env_dict.get("BASE_DOMAIN", "").strip()
+    if not base_domain:
+        return env_lines
+
+    print(f"🌐 BASE_DOMAIN={base_domain} — expanding hostnames...")
+    additions = []
+    for var, subdomain in SERVICE_SUBDOMAIN_DEFAULTS.items():
+        existing = env_dict.get(var, "").strip()
+        if not existing:
+            hostname = f"{subdomain}.{base_domain}"
+            additions.append(f"{var}={hostname}\n")
+            print(f"   {var}={hostname}")
+
+    return env_lines + additions
 
 
 # -------------------------
@@ -176,7 +218,7 @@ def main():
                 regen_sensitive=args.regen_sensitive,
                 secret_length=args.secret_length,
             )
-            if SENSITIVE_REGEX.search(var):
+            if SENSITIVE_REGEX.search(var) and var not in SENSITIVE_EXCLUDE:
                 new_val = sanitize_secret(new_val)
 
             safe_val = safe_for_env_write(new_val)
@@ -185,11 +227,12 @@ def main():
             output_lines.append(line)
 
     # 🔐 Régénération forcée de certaines variables
-    print("🔐 Régénération forcée : FLOWISE_USERNAME / FLOWISE_PASSWORD / PG_META_CRYPTO_KEY")
+    print("🔐 Régénération forcée : FLOWISE_USERNAME / FLOWISE_PASSWORD / PG_META_CRYPTO_KEY / ENCRYPTION_KEY")
     forced = {
         "FLOWISE_USERNAME": "FLOWISEUSER",
         "FLOWISE_PASSWORD": generate_secret(24),
         "PG_META_CRYPTO_KEY": generate_secret(48),
+        "ENCRYPTION_KEY": secrets.token_hex(32),  # Must be 64 hex chars for Langfuse
     }
     for k in forced:
         output_lines = [ln for ln in output_lines if not ln.startswith(f"{k}=")]
@@ -207,6 +250,9 @@ def main():
     ]
     output_lines.append(f"LOCAL_AI_BASE_PATH={base_path}\n")
     output_lines.append(f"LOCAL_AI_INFRA_PATH={infra_path}\n")
+
+    # 🌐 Expansion automatique BASE_DOMAIN → hostnames individuels
+    output_lines = expand_hostnames(output_lines)
 
     # 💾 Sauvegarde et écriture
     if os.path.exists(args.output):
@@ -236,10 +282,14 @@ def main():
     ip = get_server_ip()
     print("\n🌐 Services disponibles :")
     print(f"  🧠 Ollama      : http://{ip}:11434")
-    print(f"  ⚙️  N8n         : http://{ip}:5678")
-    print(f"  📦 Qdrant URL  : http://{ip}:6333")
-    print(f"  💬 OpenWebUI   : http://{ip}:3000/")
-    print("\n(les autres services seront ajoutés plus tard)")
+    print(f"  ⚙️  n8n         : http://{ip}:5678")
+    print(f"  💬 Open WebUI  : http://{ip}:8080")
+    print(f"  🌊 Flowise     : http://{ip}:3001")
+    print(f"  📦 Qdrant      : http://{ip}:6333")
+    print(f"  🔍 SearXNG     : http://{ip}:8081")
+    print(f"  📊 Langfuse    : http://{ip}:3000")
+    print(f"  🕸️  Neo4j       : http://{ip}:7474")
+    print(f"  🐘 PostgreSQL  : {ip}:5433")
 
 
 if __name__ == "__main__":

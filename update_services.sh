@@ -1,8 +1,24 @@
-# Stop all services
-docker compose -p localai -f docker-compose.yml --profile cpu  down
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Pull latest versions of all containers
-docker compose -p localai -f docker-compose.yml --profile cpu  pull
+PROFILE="${1:-cpu}"
 
-# Start services again with your desired profile
-python3 start_services.py --profile cpu --no-caddy
+echo "========================================="
+echo "  Local AI Packaged — Update Services"
+echo "========================================="
+echo "Profile: $PROFILE"
+echo ""
+
+echo "🛑 Stopping services..."
+docker compose -p localai -f docker-compose.yml --profile "$PROFILE" down
+
+echo ""
+echo "⬇️  Pulling latest images..."
+docker compose -p localai -f docker-compose.yml --profile "$PROFILE" pull
+
+echo ""
+echo "🚀 Restarting services..."
+python3 start_services.py --profile "$PROFILE" --update
+
+echo ""
+echo "✅ Update complete!"
