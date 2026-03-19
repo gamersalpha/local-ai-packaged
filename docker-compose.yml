@@ -14,6 +14,7 @@ volumes:
   langfuse_clickhouse_data:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
+  unsloth_work:
 
 # ---------------------- Shared anchors ---------------------- #
 
@@ -460,6 +461,35 @@ services:
       timeout: 5s
       retries: 5
       start_period: 1s
+    logging: *default-logging
+
+  # ---- Fine-tuning ---- #
+
+  unsloth:
+    profiles: ["gpu-nvidia"]
+    image: unsloth/unsloth:latest
+    container_name: unsloth
+    restart: unless-stopped
+    expose:
+      - 8888/tcp
+      - 8000/tcp
+    environment:
+      - JUPYTER_PASSWORD=${UNSLOTH_JUPYTER_PASSWORD:-unsloth}
+    volumes:
+      - unsloth_work:/workspace/work
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:8888 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     logging: *default-logging
 
   # ---- Reverse Proxy (optional) ---- #

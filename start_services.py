@@ -38,6 +38,7 @@ SERVICE_DEPS = {
     "minio":     [],
     "postgres":  [],
     "redis":     [],
+    "unsloth":   [],
 }
 
 # Friendly name -> list of compose service names
@@ -49,6 +50,7 @@ SERVICE_GROUPS = {
     "neo4j":     ["neo4j"],
     "langfuse":  ["langfuse-web", "langfuse-worker", "clickhouse", "minio"],
     "searxng":   ["searxng"],
+    "unsloth":   ["unsloth"],
 }
 
 ALL_SELECTABLE = list(SERVICE_GROUPS.keys()) + ["ollama"]
@@ -366,23 +368,18 @@ def start_local_ai(profile=None, environment=None, services=None):
     else:
         service_list = resolve_services(services)
 
-    # Try launching everything at once
+    # Try launching everything at once (output streamed in real-time)
     cmd = base_cmd + ["up", "-d"]
     if service_list:
         cmd.extend(service_list)
 
     print("Running:", " ".join(cmd))
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd)
 
     if result.returncode == 0:
-        # All good, print summary
-        print(result.stdout)
         print_deployment_summary(base_cmd)
         return
 
-    # Something failed — print the output and retry individually
-    print(result.stdout)
-    print(result.stderr)
     print("\nSome services failed to start. Retrying individually...\n")
 
     # Get the list of services to start
@@ -548,6 +545,7 @@ def interactive_setup():
         ("neo4j",     "Neo4j       — Graph database",           False),
         ("langfuse",  "Langfuse    — LLM observability",        False),
         ("searxng",   "SearXNG     — Web search for RAG",       True),
+        ("unsloth",   "Unsloth     — LLM fine-tuning studio",   False),
     ]
 
     print("Select services to deploy (Enter = accept default):\n")

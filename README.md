@@ -19,6 +19,7 @@ It bundles everything you need for local LLM workflows, including:
 - 📦 **Qdrant** — Vector database for RAG
 - 🕸️ **Neo4j** — Graph database
 - 🔍 **SearXNG** — Web search engine for RAG pipelines
+- 🔧 **Unsloth** — LLM fine-tuning studio (NVIDIA GPU required, ~20 GB image)
 - 🔒 **Caddy** or **SWAG** — Reverse proxy with auto HTTPS (optional)
 
 This version is designed for **technical self‑hosters** running the stack on a home server, NAS (e.g. Synology), or any Linux/Windows host.
@@ -111,7 +112,7 @@ python3 start_services.py --services n8n openwebui ollama
 python3 start_services.py --services all
 ```
 
-Available: `n8n`, `openwebui`, `flowise`, `qdrant`, `neo4j`, `langfuse`, `searxng`, `ollama`
+Available: `n8n`, `openwebui`, `flowise`, `qdrant`, `neo4j`, `langfuse`, `searxng`, `ollama`, `unsloth`
 
 #### Examples
 
@@ -173,6 +174,7 @@ This will stop all containers, pull latest images, and restart the stack.
 | **Neo4j** | Graph database browser | http://localhost:7474 |
 | **Qdrant** | Vector database API | http://localhost:6333 |
 | **PostgreSQL** | Shared database | localhost:5433 |
+| **Unsloth** | LLM fine-tuning studio (~20 GB image, long pull) | http://localhost:8888 |
 | **Supabase** | DB, Auth & API (optional) | http://localhost:54323 |
 
 > In private mode, all ports are bound to `127.0.0.1`. In public mode, they are accessible on all interfaces.
@@ -264,6 +266,11 @@ Databases are auto-created on first start via `postgres/init/01-create-databases
 ### Ports already in use
 - Check what's using the port: `netstat -tlnp | grep <port>`
 - Edit `docker-compose.override.private.yml` to change exposed ports
+
+### Unsloth image takes forever to pull
+- The `unsloth/unsloth:latest` image is ~20 GB (CUDA + PyTorch). First pull can take 10-30 minutes depending on your connection.
+- You can pull it in the background: `docker pull unsloth/unsloth:latest`
+- Deploy all other services first without Unsloth, then add it later with: `docker compose -p localai --profile gpu-nvidia -f docker-compose.yml -f docker-compose.override.private.yml up -d unsloth`
 
 ### Container healthcheck failing
 - All healthchecks use `127.0.0.1` (not `localhost`) to avoid IPv6 issues
