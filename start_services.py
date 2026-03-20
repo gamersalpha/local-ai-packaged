@@ -147,67 +147,33 @@ def find_swag_proxy_dir():
     return None
 
 
-def get_swag_network():
-    """Detect the Docker network used by the SWAG container."""
+def connect_swag_to_localai():
+    """Connect the SWAG container to the localai network so it can reach all services."""
+    localai_net = "localai_default"
+
+    # Check if SWAG is already on the localai network
     try:
         result = subprocess.run(
             ["docker", "inspect", "swag", "--format",
-             "{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}"],
+             "{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}"],
             capture_output=True, text=True, check=True
         )
-        network = result.stdout.strip()
-        if network:
-            return network
+        if localai_net in result.stdout:
+            print(f"  SWAG already connected to {localai_net}")
+            return
     except Exception:
-        pass
-    return None
-
-
-def connect_containers_to_swag():
-    """Connect all running localai containers to the SWAG network."""
-    swag_net = get_swag_network()
-    if not swag_net:
-        print("  Could not detect SWAG network, skipping network bridging.")
+        print("  Could not inspect SWAG container, skipping network bridging.")
         return
 
-    print(f"  SWAG network detected: {swag_net}")
-
-    # Get all running containers in the localai project
+    # Connect SWAG to localai network
     try:
-        result = subprocess.run(
-            ["docker", "ps", "--filter", "label=com.docker.compose.project=localai",
-             "--format", "{{.Names}}"],
+        subprocess.run(
+            ["docker", "network", "connect", localai_net, "swag"],
             capture_output=True, text=True, check=True
         )
-        containers = [c.strip() for c in result.stdout.strip().split("\n") if c.strip()]
-    except Exception:
-        print("  Could not list localai containers.")
-        return
-
-    connected = 0
-    for container in containers:
-        try:
-            # Check if already connected
-            inspect = subprocess.run(
-                ["docker", "inspect", container, "--format",
-                 "{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}"],
-                capture_output=True, text=True, check=True
-            )
-            if swag_net in inspect.stdout:
-                continue
-
-            subprocess.run(
-                ["docker", "network", "connect", swag_net, container],
-                capture_output=True, text=True, check=True
-            )
-            connected += 1
-        except Exception:
-            pass
-
-    if connected > 0:
-        print(f"  {connected} container(s) connected to {swag_net}")
-    else:
-        print(f"  All containers already on {swag_net}")
+        print(f"  SWAG connected to {localai_net}")
+    except Exception as e:
+        print(f"  Could not connect SWAG to {localai_net}: {e}")
 
 
 def install_swag_confs(swag_proxy_dir):
@@ -871,7 +837,7 @@ def main():
         swag_dir = args.swag_dir or find_swag_proxy_dir()
         if swag_dir:
             install_swag_confs(swag_dir)
-            connect_containers_to_swag()
+            connect_swag_to_localai()
         else:
             print("Could not find SWAG proxy-confs directory.")
             print("Use --swag-dir to specify the path manually.")
