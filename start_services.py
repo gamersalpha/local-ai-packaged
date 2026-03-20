@@ -200,7 +200,11 @@ def check_or_generate_env():
 # ---------------------- YAML MODIFIERS ---------------------- #
 
 def toggle_supabase_include(disable_supabase: bool):
-    """(Un)comment the supabase include line in docker-compose.yml."""
+    """(Un)comment the supabase include block in docker-compose.yml.
+
+    When disabling, comments out both the 'include:' directive and the supabase path.
+    When enabling, restores both lines so Docker Compose can parse the include block.
+    """
     compose_path = "docker-compose.yml"
     if not os.path.exists(compose_path):
         print("docker-compose.yml not found, skipping Supabase include management.")
@@ -214,20 +218,52 @@ def toggle_supabase_include(disable_supabase: bool):
 
     for line in lines:
         stripped = line.strip()
-        if not disable_supabase and stripped.startswith("#") and "supabase/docker/docker-compose.yml" in stripped:
-            new_lines.append(line.replace("#", "", 1))
-            modified = True
-        elif disable_supabase and not stripped.startswith("#") and "supabase/docker/docker-compose.yml" in stripped:
-            new_lines.append("# " + line)
-            modified = True
+
+        # Handle the 'include:' directive itself
+        if "supabase/docker/docker-compose.yml" not in stripped:
+            if stripped == "include:" and disable_supabase:
+                new_lines.append("# " + line if not line.startswith("#") else line)
+                if not line.startswith("#"):
+                    modified = True
+                continue
+            elif stripped in ("# include:", "#include:") and not disable_supabase:
+                new_lines.append(line.lstrip("#").lstrip(" ") if stripped.startswith("#") else line)
+                # Restore: remove leading '# '
+                restored = line
+                if restored.startswith("# "):
+                    restored = restored[2:]
+                elif restored.startswith("#"):
+                    restored = restored[1:]
+                new_lines[-1] = restored
+                modified = True
+                continue
+
+        # Handle the supabase compose path line
+        if "supabase/docker/docker-compose.yml" in stripped:
+            if disable_supabase and not stripped.startswith("#"):
+                new_lines.append("# " + line)
+                modified = True
+            elif not disable_supabase and stripped.startswith("#"):
+                restored = line
+                if restored.strip().startswith("# "):
+                    restored = restored.replace("# ", "", 1)
+                elif restored.strip().startswith("#"):
+                    restored = restored.replace("#", "", 1)
+                new_lines.append(restored)
+                modified = True
+            else:
+                new_lines.append(line)
         else:
             new_lines.append(line)
 
     if modified:
         with open(compose_path, "w") as f:
             f.writelines(new_lines)
-        state = "commented out" if disable_supabase else "restored"
-        print(f"Supabase include line {state} in docker-compose.yml.")
+        state = "disabled (include block commented)" if disable_supabase else "enabled (include block restored)"
+        print(f"Supabase {state} in docker-compose.yml.")
+    else:
+        if disable_supabase:
+            print("Supabase include already disabled in docker-compose.yml.")
 
 
 def toggle_caddy_service(disable_caddy: bool):
