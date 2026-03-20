@@ -56,11 +56,21 @@ cd local-ai-packaged
 python3 generate_env.py --yes --regen-sensitive
 ```
 
+Pour choisir votre domaine de base (les sous-domaines de chaque service seront dérivés automatiquement) :
+```bash
+# Via l'option --domain
+python3 generate_env.py --yes --regen-sensitive --domain home.example.com
+
+# Ou en mode interactif (sans --yes), le script demandera le domaine
+python3 generate_env.py --regen-sensitive
+```
+
 Features:
 - Generates secure random secrets
 - Detects GPU type (NVIDIA / AMD / CPU)
 - Sets correct local paths for volumes
-- Expands `BASE_DOMAIN` into per-service hostnames if configured
+- Configures `BASE_DOMAIN` interactively or via `--domain` flag
+- Expands `BASE_DOMAIN` into per-service hostnames automatically
 
 ### ③ Deploy the stack
 

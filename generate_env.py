@@ -189,6 +189,7 @@ def main():
     parser.add_argument("--output", "-o", default="./.env", help="Chemin du fichier .env généré")
     parser.add_argument("--yes", "-y", action="store_true", help="Accepter les valeurs par défaut sans prompt")
     parser.add_argument("--regen-sensitive", action="store_true", help="Regénérer toutes les variables sensibles")
+    parser.add_argument("--domain", type=str, default=None, help="Définir BASE_DOMAIN (ex: home.example.com)")
     parser.add_argument("--docker", action="store_true", help="Construire et démarrer Docker Compose automatiquement")
     parser.add_argument("--secret-length", type=int, default=32, help="Longueur des secrets générés")
     args = parser.parse_args()
@@ -238,6 +239,34 @@ def main():
         output_lines = [ln for ln in output_lines if not ln.startswith(f"{k}=")]
     for k, v in forced.items():
         output_lines.append(f"{k}={safe_for_env_write(sanitize_secret(v))}\n")
+
+    # 🌐 Définition interactive ou CLI de BASE_DOMAIN
+    domain = args.domain
+    if domain is None and not args.yes:
+        # Chercher la valeur actuelle de BASE_DOMAIN
+        current_domain = ""
+        for ln in output_lines:
+            m = VAR_LINE_RE.match(ln.strip())
+            if m and m.group(1) == "BASE_DOMAIN":
+                current_domain = m.group(2).strip().strip('"').strip("'")
+                break
+        prompt_msg = f"🌐 Domaine de base (BASE_DOMAIN) [{current_domain or 'vide'}] : "
+        user_input = input(prompt_msg).strip()
+        if user_input:
+            domain = user_input
+
+    if domain is not None:
+        # Remplacer ou ajouter BASE_DOMAIN
+        found = False
+        for i, ln in enumerate(output_lines):
+            m = VAR_LINE_RE.match(ln.strip())
+            if m and m.group(1) == "BASE_DOMAIN":
+                output_lines[i] = f"BASE_DOMAIN={domain}\n"
+                found = True
+                break
+        if not found:
+            output_lines.append(f"BASE_DOMAIN={domain}\n")
+        print(f"🌐 BASE_DOMAIN={domain}")
 
     # 📂 Ajout automatique des chemins dynamiques
     script_dir = os.path.dirname(os.path.abspath(__file__))
