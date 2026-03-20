@@ -69,3 +69,7 @@ services:
   ollama-gpu-amd:
     ports:
       - 127.0.0.1:11434:11434
+
+  landing:
+    ports:
+      - 127.0.0.1:8090:80

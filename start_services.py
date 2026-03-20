@@ -39,6 +39,7 @@ SERVICE_DEPS = {
     "postgres":  [],
     "redis":     [],
     "unsloth":   [],
+    "landing":   [],
 }
 
 # Friendly name -> list of compose service names
@@ -51,6 +52,7 @@ SERVICE_GROUPS = {
     "langfuse":  ["langfuse-web", "langfuse-worker", "clickhouse", "minio"],
     "searxng":   ["searxng"],
     "unsloth":   ["unsloth"],
+    "landing":   ["landing"],
 }
 
 ALL_SELECTABLE = list(SERVICE_GROUPS.keys()) + ["ollama"]
@@ -584,6 +586,7 @@ def interactive_setup():
         ("langfuse",  "Langfuse    — LLM observability",        False),
         ("searxng",   "SearXNG     — Web search for RAG",       True),
         ("unsloth",   "Unsloth     — LLM fine-tuning studio",   False),
+        ("landing",   "Landing     — Cyberpunk dashboard page",  True),
     ]
 
     print("Select services to deploy (Enter = accept default):\n")

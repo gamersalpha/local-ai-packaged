@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOCAL AI HUB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --cyan:#00f0ff;--magenta:#ff00aa;--yellow:#f0e000;--green:#00ff6a;
+  --bg:#0a0a12;--card:#0d0d1a;--card-border:#1a1a2e;
+  --text:#c8c8d4;--text-dim:#5a5a72;
+  --glow-cyan:0 0 20px rgba(0,240,255,.4),0 0 60px rgba(0,240,255,.15);
+  --glow-magenta:0 0 20px rgba(255,0,170,.4),0 0 60px rgba(255,0,170,.15);
+  --glow-yellow:0 0 20px rgba(240,224,0,.4),0 0 60px rgba(240,224,0,.15);
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Rajdhani',sans-serif;font-weight:400;
+  min-height:100vh;overflow-x:hidden;
+  position:relative;
+}
+
+/* ── Scanline overlay ── */
+body::after{
+  content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px
+  );
+}
+
+/* ── Animated grid background ── */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,240,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,.03) 1px,transparent 1px);
+  background-size:60px 60px;
+  animation:gridShift 20s linear infinite;
+}
+@keyframes gridShift{to{background-position:60px 60px}}
+
+/* ── Ambient glow blobs ── */
+.bg-glow{
+  position:fixed;z-index:0;pointer-events:none;border-radius:50%;
+  filter:blur(120px);opacity:.25;
+}
+.bg-glow--cyan{width:500px;height:500px;background:var(--cyan);top:-100px;left:-100px;animation:drift1 15s ease-in-out infinite alternate}
+.bg-glow--magenta{width:400px;height:400px;background:var(--magenta);bottom:-80px;right:-80px;animation:drift2 18s ease-in-out infinite alternate}
+.bg-glow--yellow{width:300px;height:300px;background:var(--yellow);top:40%;left:60%;animation:drift3 12s ease-in-out infinite alternate;opacity:.12}
+@keyframes drift1{to{transform:translate(80px,60px)}}
+@keyframes drift2{to{transform:translate(-60px,-80px)}}
+@keyframes drift3{to{transform:translate(-100px,40px)}}
+
+/* ── Layout ── */
+.container{
+  position:relative;z-index:1;
+  max-width:1280px;margin:0 auto;padding:2rem 1.5rem 3rem;
+}
+
+/* ── Header / Glitch Title ── */
+.header{text-align:center;margin-bottom:3rem;padding-top:1rem}
+.glitch-wrap{display:inline-block;position:relative}
+.glitch{
+  font-family:'Orbitron',sans-serif;font-weight:900;
+  font-size:clamp(2.4rem,7vw,4.8rem);
+  color:#fff;letter-spacing:.12em;
+  text-shadow:0 0 10px var(--cyan),0 0 40px rgba(0,240,255,.3);
+  position:relative;
+}
+.glitch::before,.glitch::after{
+  content:attr(data-text);position:absolute;top:0;left:0;
+  width:100%;height:100%;overflow:hidden;
+}
+.glitch::before{
+  color:var(--cyan);z-index:-1;
+  animation:glitch-1 3s infinite linear alternate-reverse;
+  clip-path:inset(0 0 65% 0);
+}
+.glitch::after{
+  color:var(--magenta);z-index:-2;
+  animation:glitch-2 2.5s infinite linear alternate-reverse;
+  clip-path:inset(60% 0 0 0);
+}
+@keyframes glitch-1{
+  0%,100%{transform:translate(0)}
+  20%{transform:translate(-3px,2px)}
+  40%{transform:translate(3px,-1px)}
+  60%{transform:translate(-2px,1px)}
+  80%{transform:translate(2px,-2px)}
+}
+@keyframes glitch-2{
+  0%,100%{transform:translate(0)}
+  25%{transform:translate(3px,1px)}
+  50%{transform:translate(-2px,-1px)}
+  75%{transform:translate(2px,2px)}
+}
+.subtitle{
+  font-family:'Share Tech Mono',monospace;font-size:clamp(.85rem,2vw,1.05rem);
+  color:var(--cyan);margin-top:.8rem;letter-spacing:.15em;
+  opacity:.8;
+}
+.subtitle .domain{color:var(--yellow)}
+
+/* ── Decorative line ── */
+.divider{
+  height:1px;margin:0 auto 2.5rem;max-width:700px;
+  background:linear-gradient(90deg,transparent,var(--cyan),var(--magenta),transparent);
+  opacity:.5;
+}
+
+/* ── Status bar ── */
+.status-bar{
+  display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;
+  margin-bottom:2.5rem;font-family:'Share Tech Mono',monospace;font-size:.8rem;
+  color:var(--text-dim);letter-spacing:.08em;
+}
+.status-bar span{display:flex;align-items:center;gap:.4rem}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.status-dot--on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.status-dot--off{background:#444}
+
+/* ── Service grid ── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:1.25rem;
+}
+
+/* ── Card ── */
+.card{
+  position:relative;
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:6px;
+  padding:1.5rem;
+  text-decoration:none;color:inherit;
+  display:flex;flex-direction:column;gap:.6rem;
+  transition:all .3s ease;
+  overflow:hidden;
+  cursor:default;
+}
+.card.active{cursor:pointer}
+.card::before{
+  content:'';position:absolute;inset:-1px;border-radius:7px;
+  padding:1px;
+  background:linear-gradient(135deg,var(--cyan),var(--magenta));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  opacity:0;transition:opacity .3s ease;
+}
+.card:hover::before{opacity:1}
+.card:hover{
+  transform:translateY(-3px);
+  box-shadow:var(--glow-cyan);
+  border-color:transparent;
+}
+.card.active:hover{box-shadow:var(--glow-cyan)}
+.card--coming:hover{box-shadow:var(--glow-yellow)}
+.card--coming:hover::before{
+  background:linear-gradient(135deg,var(--yellow),rgba(240,224,0,.3));
+}
+
+/* Card inner layout */
+.card__top{display:flex;align-items:center;gap:.75rem}
+.card__icon{
+  font-size:1.8rem;line-height:1;
+  filter:drop-shadow(0 0 6px rgba(0,240,255,.5));
+  flex-shrink:0;
+}
+.card__name{
+  font-family:'Orbitron',sans-serif;font-weight:700;
+  font-size:1rem;color:#fff;letter-spacing:.06em;
+}
+.card__status{
+  width:8px;height:8px;border-radius:50%;
+  margin-left:auto;flex-shrink:0;
+}
+.card__status--on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.card__status--off{background:#333}
+.card__status--soon{background:var(--yellow);box-shadow:0 0 8px rgba(240,224,0,.5);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+.card__desc{
+  font-size:.85rem;color:var(--text-dim);line-height:1.4;
+  font-family:'Rajdhani',sans-serif;font-weight:400;
+}
+
+.card__urls{
+  margin-top:auto;padding-top:.6rem;
+  border-top:1px solid rgba(255,255,255,.05);
+  font-family:'Share Tech Mono',monospace;font-size:.72rem;
+  display:flex;flex-direction:column;gap:.25rem;
+}
+.card__url{
+  color:var(--cyan);text-decoration:none;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  transition:color .2s;
+}
+.card__url:hover{color:#fff}
+.card__url--local{color:var(--text-dim);font-size:.68rem}
+.card__url--local:hover{color:var(--text)}
+.card__badge{
+  display:inline-block;font-family:'Share Tech Mono',monospace;
+  font-size:.65rem;letter-spacing:.1em;
+  padding:.15rem .5rem;border-radius:3px;
+  background:rgba(240,224,0,.1);color:var(--yellow);
+  border:1px solid rgba(240,224,0,.25);
+}
+.card__noconfig{
+  font-family:'Share Tech Mono',monospace;font-size:.72rem;
+  color:var(--text-dim);opacity:.5;
+}
+
+/* ── Footer ── */
+.footer{
+  text-align:center;margin-top:3rem;
+  font-family:'Share Tech Mono',monospace;font-size:.75rem;
+  color:var(--text-dim);letter-spacing:.1em;opacity:.5;
+}
+.footer a{color:var(--cyan);text-decoration:none}
+.footer a:hover{text-decoration:underline}
+
+/* ── Card entrance animation ── */
+.card{opacity:0;transform:translateY(20px);animation:cardIn .5s ease forwards}
+@keyframes cardIn{to{opacity:1;transform:translateY(0)}}
+
+/* ── Responsive ── */
+@media(max-width:640px){
+  .container{padding:1.2rem 1rem 2rem}
+  .grid{grid-template-columns:1fr}
+  .status-bar{gap:1rem;font-size:.7rem}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow--cyan"></div>
+<div class="bg-glow bg-glow--magenta"></div>
+<div class="bg-glow bg-glow--yellow"></div>
+
+<div class="container">
+  <header class="header">
+    <div class="glitch-wrap">
+      <h1 class="glitch" data-text="LOCAL AI HUB">LOCAL AI HUB</h1>
+    </div>
+    <p class="subtitle">INFRASTRUCTURE CONTROL PANEL &mdash; <span class="domain" id="domainDisplay">loading...</span></p>
+  </header>
+
+  <div class="divider"></div>
+
+  <div class="status-bar" id="statusBar"></div>
+
+  <div class="grid" id="serviceGrid"></div>
+
+  <footer class="footer">
+    POWERED BY <a href="https://github.com/gamersalpha/local-ai-packaged" target="_blank">LOCAL AI PACKAGED</a>
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+  const CFG = window.__CONFIG__ || { baseDomain:'', services:{} };
+
+  const SERVICES = [
+    { key:'ollama',    icon:'🧠', name:'Ollama',     desc:'LLM Inference Engine — Run large language models locally' },
+    { key:'openwebui', icon:'💬', name:'Open WebUI',  desc:'Chat Interface — Interact with your AI models' },
+    { key:'n8n',       icon:'⚙️', name:'n8n',         desc:'Workflow Automation — Build AI-powered workflows' },
+    { key:'flowise',   icon:'🌊', name:'Flowise',     desc:'Low-Code AI Builder — Visual LLM chain editor' },
+    { key:'qdrant',    icon:'📦', name:'Qdrant',      desc:'Vector Database — Semantic search & embeddings' },
+    { key:'neo4j',     icon:'🕸️', name:'Neo4j',       desc:'Graph Database — Knowledge graph exploration' },
+    { key:'langfuse',  icon:'📊', name:'Langfuse',    desc:'LLM Observability — Traces, evals & analytics' },
+    { key:'searxng',   icon:'🔍', name:'SearXNG',     desc:'Web Search Engine — Privacy-respecting meta search' },
+    { key:'unsloth',   icon:'🧬', name:'Unsloth',     desc:'LLM Fine-Tuning — Train & adapt models (GPU)' },
+    { key:'supabase',  icon:'🐘', name:'Supabase',    desc:'Database Platform — Auth, storage & realtime' },
+    { key:'comfyui',   icon:'🎨', name:'ComfyUI',     desc:'Image Generation — Node-based Stable Diffusion', comingSoon:true },
+  ];
+
+  // Domain display
+  const domainEl = document.getElementById('domainDisplay');
+  domainEl.textContent = CFG.baseDomain || window.location.hostname || 'localhost';
+
+  // Status bar
+  const bar = document.getElementById('statusBar');
+  let onCount = 0, offCount = 0;
+  SERVICES.forEach(s => {
+    const svc = CFG.services[s.key];
+    if (s.comingSoon) return;
+    if (svc && (svc.url || svc.local)) onCount++; else offCount++;
+  });
+  bar.innerHTML = `
+    <span><span class="status-dot status-dot--on"></span> ${onCount} SERVICES CONFIGURED</span>
+    <span><span class="status-dot status-dot--off"></span> ${offCount} NOT CONFIGURED</span>
+    <span>SYS.TIME ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+  `;
+
+  // Render cards
+  const grid = document.getElementById('serviceGrid');
+  SERVICES.forEach((s, i) => {
+    const svc = CFG.services[s.key] || {};
+    const hasUrl = !!(svc.url || svc.local);
+    const mainUrl = svc.url || svc.local || null;
+
+    const card = document.createElement(mainUrl ? 'a' : 'div');
+    if (mainUrl) {
+      card.href = mainUrl;
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+    }
+
+    let classes = 'card';
+    if (hasUrl) classes += ' active';
+    if (s.comingSoon) classes += ' card--coming';
+    card.className = classes;
+    card.style.animationDelay = `${i * 0.06}s`;
+
+    // Status indicator
+    let statusClass = 'card__status--off';
+    if (s.comingSoon) statusClass = 'card__status--soon';
+    else if (hasUrl) statusClass = 'card__status--on';
+
+    // URL section
+    let urlsHtml = '';
+    if (s.comingSoon) {
+      urlsHtml = `<span class="card__badge">COMING SOON</span>`;
+    } else if (hasUrl) {
+      urlsHtml = `<div class="card__urls">`;
+      if (svc.url) urlsHtml += `<span class="card__url">${svc.url}</span>`;
+      if (svc.local) urlsHtml += `<span class="card__url card__url--local">${svc.local}</span>`;
+      urlsHtml += `</div>`;
+    } else {
+      urlsHtml = `<span class="card__noconfig">// NOT CONFIGURED</span>`;
+    }
+
+    card.innerHTML = `
+      <div class="card__top">
+        <span class="card__icon">${s.icon}</span>
+        <span class="card__name">${s.name}</span>
+        <span class="card__status ${statusClass}"></span>
+      </div>
+      <p class="card__desc">${s.desc}</p>
+      ${urlsHtml}
+    `;
+
+    grid.appendChild(card);
+  });
+
+  // Live clock
+  setInterval(() => {
+    const spans = bar.querySelectorAll('span');
+    const last = spans[spans.length - 1];
+    if (last) last.innerHTML = `SYS.TIME ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+  }, 1000);
+})();
+</script>
+</body>
+</html>

@@ -492,6 +492,36 @@ services:
       start_period: 30s
     logging: *default-logging
 
+  # ---- Landing Page ---- #
+
+  landing:
+    build: ./landing
+    container_name: landing
+    restart: unless-stopped
+    expose:
+      - 80/tcp
+    environment:
+      - BASE_DOMAIN=${BASE_DOMAIN:-}
+      - SERVER_IP=${SERVER_IP:-127.0.0.1}
+      - OLLAMA_HOSTNAME=${OLLAMA_HOSTNAME:-}
+      - WEBUI_HOSTNAME=${WEBUI_HOSTNAME:-}
+      - N8N_HOSTNAME=${N8N_HOSTNAME:-}
+      - FLOWISE_HOSTNAME=${FLOWISE_HOSTNAME:-}
+      - QDRANT_HOSTNAME=${QDRANT_HOSTNAME:-}
+      - NEO4J_HOSTNAME=${NEO4J_HOSTNAME:-}
+      - LANGFUSE_HOSTNAME=${LANGFUSE_HOSTNAME:-}
+      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME:-}
+      - UNSLOTH_HOSTNAME=${UNSLOTH_HOSTNAME:-}
+      - SUPABASE_HOSTNAME=${SUPABASE_HOSTNAME:-}
+      - COMFYUI_HOSTNAME=${COMFYUI_HOSTNAME:-}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:80 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+
   # ---- Reverse Proxy (optional) ---- #
 
 #   caddy:

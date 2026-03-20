@@ -155,6 +155,7 @@ SERVICE_SUBDOMAIN_DEFAULTS = {
     "OLLAMA_HOSTNAME": "ollama",
     "QDRANT_HOSTNAME": "qdrant",
     "UNSLOTH_HOSTNAME": "unsloth",
+    "HUB_HOSTNAME": "hub",
 }
 
 
@@ -282,6 +283,10 @@ def main():
     output_lines.append(f"LOCAL_AI_BASE_PATH={base_path}\n")
     output_lines.append(f"LOCAL_AI_INFRA_PATH={infra_path}\n")
 
+    # 🌐 Ajout automatique de SERVER_IP
+    output_lines = [ln for ln in output_lines if not ln.startswith("SERVER_IP=")]
+    output_lines.append(f"SERVER_IP={get_server_ip()}\n")
+
     # 🌐 Expansion automatique BASE_DOMAIN → hostnames individuels
     output_lines = expand_hostnames(output_lines)
 
@@ -349,6 +354,7 @@ def main():
     print(svc_line("📊", "Langfuse   ", "LANGFUSE_HOSTNAME", "langfuse", 3000))
     print(svc_line("🕸️ ", "Neo4j      ", "NEO4J_HOSTNAME", "neo4j", 7474))
     print(svc_line("🧬", "Unsloth    ", "UNSLOTH_HOSTNAME", "unsloth", 8888))
+    print(svc_line("🏠", "Hub        ", "HUB_HOSTNAME", "hub", 8090))
     print(f"  🐘 PostgreSQL  : {ip}:5433")
 
 
