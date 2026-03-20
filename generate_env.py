@@ -248,7 +248,7 @@ def main():
                     existing_env[m.group(1)] = m.group(2).strip().strip('"').strip("'")
 
     forced = {
-        "FLOWISE_USERNAME": "FLOWISEUSER",
+        "FLOWISE_USERNAME": "admin@localai.local",
         "FLOWISE_PASSWORD": generate_secret(24),
         "PG_META_CRYPTO_KEY": generate_secret(48),
         "ENCRYPTION_KEY": secrets.token_hex(32),  # Must be 64 hex chars for Langfuse
