@@ -30,6 +30,9 @@ SENSITIVE_REGEX = re.compile(r"(PASS(word)?|SECRET|KEY|TOKEN|JWT|SALT|AUTH|ACCES
 # Variables that match SENSITIVE_REGEX but should NOT be treated as secrets
 # Variables that match SENSITIVE_REGEX but need special handling (not random A-Z/0-9/!?)
 SENSITIVE_EXCLUDE = {"NEO4J_AUTH", "REDIS_AUTH", "ENCRYPTION_KEY"}
+# Variables that should NEVER be regenerated once they have a value (encryption keys that
+# are baked into volumes/databases — changing them breaks existing data).
+NEVER_REGEN = {"N8N_ENCRYPTION_KEY", "ENCRYPTION_KEY"}
 VAR_LINE_RE = re.compile(r"^([A-Za-z0-9_]+)=(.*)$")
 
 ALLOWED_SPECIAL = "!?"
@@ -105,6 +108,10 @@ def run_command(cmd):
 
 def prompt_for(varname, current_value, auto_accept=False, regen_sensitive=False, secret_length=32):
     sensitive = SENSITIVE_REGEX.search(varname) is not None and varname not in SENSITIVE_EXCLUDE
+
+    # Never regenerate encryption keys that are tied to existing data
+    if varname in NEVER_REGEN and current_value != "":
+        return current_value
 
     if auto_accept:
         if sensitive and regen_sensitive:
@@ -230,18 +237,33 @@ def main():
         else:
             output_lines.append(line)
 
-    # 🔐 Régénération forcée de certaines variables
-    print("🔐 Régénération forcée : FLOWISE_USERNAME / FLOWISE_PASSWORD / PG_META_CRYPTO_KEY / ENCRYPTION_KEY")
+    # 🔐 Régénération forcée de certaines variables (sauf celles déjà présentes dans NEVER_REGEN)
+    # Lire les valeurs existantes pour préserver les clés critiques
+    existing_env = {}
+    if os.path.exists(args.output):
+        with open(args.output, "r", encoding="utf-8") as f:
+            for ln in f:
+                m = VAR_LINE_RE.match(ln.strip())
+                if m:
+                    existing_env[m.group(1)] = m.group(2).strip().strip('"').strip("'")
+
     forced = {
         "FLOWISE_USERNAME": "FLOWISEUSER",
         "FLOWISE_PASSWORD": generate_secret(24),
         "PG_META_CRYPTO_KEY": generate_secret(48),
         "ENCRYPTION_KEY": secrets.token_hex(32),  # Must be 64 hex chars for Langfuse
     }
+    # Préserver les clés critiques si elles existent déjà
+    for k in list(forced.keys()):
+        if k in NEVER_REGEN and existing_env.get(k, "").strip():
+            print(f"  🔒 {k} préservée (clé existante)")
+            forced[k] = existing_env[k]
+
+    print("🔐 Régénération forcée : FLOWISE_USERNAME / FLOWISE_PASSWORD / PG_META_CRYPTO_KEY / ENCRYPTION_KEY")
     for k in forced:
         output_lines = [ln for ln in output_lines if not ln.startswith(f"{k}=")]
     for k, v in forced.items():
-        output_lines.append(f"{k}={safe_for_env_write(sanitize_secret(v))}\n")
+        output_lines.append(f"{k}={safe_for_env_write(v)}\n")
 
     # 🌐 Définition interactive ou CLI de BASE_DOMAIN
     domain = args.domain
