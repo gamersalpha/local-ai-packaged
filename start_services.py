@@ -147,6 +147,69 @@ def find_swag_proxy_dir():
     return None
 
 
+def get_swag_network():
+    """Detect the Docker network used by the SWAG container."""
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "swag", "--format",
+             "{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}"],
+            capture_output=True, text=True, check=True
+        )
+        network = result.stdout.strip()
+        if network:
+            return network
+    except Exception:
+        pass
+    return None
+
+
+def connect_containers_to_swag():
+    """Connect all running localai containers to the SWAG network."""
+    swag_net = get_swag_network()
+    if not swag_net:
+        print("  Could not detect SWAG network, skipping network bridging.")
+        return
+
+    print(f"  SWAG network detected: {swag_net}")
+
+    # Get all running containers in the localai project
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "--filter", "label=com.docker.compose.project=localai",
+             "--format", "{{.Names}}"],
+            capture_output=True, text=True, check=True
+        )
+        containers = [c.strip() for c in result.stdout.strip().split("\n") if c.strip()]
+    except Exception:
+        print("  Could not list localai containers.")
+        return
+
+    connected = 0
+    for container in containers:
+        try:
+            # Check if already connected
+            inspect = subprocess.run(
+                ["docker", "inspect", container, "--format",
+                 "{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}"],
+                capture_output=True, text=True, check=True
+            )
+            if swag_net in inspect.stdout:
+                continue
+
+            subprocess.run(
+                ["docker", "network", "connect", swag_net, container],
+                capture_output=True, text=True, check=True
+            )
+            connected += 1
+        except Exception:
+            pass
+
+    if connected > 0:
+        print(f"  {connected} container(s) connected to {swag_net}")
+    else:
+        print(f"  All containers already on {swag_net}")
+
+
 def install_swag_confs(swag_proxy_dir):
     """Copy SWAG proxy-conf templates to the SWAG proxy-confs directory."""
     templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "swag")
@@ -808,6 +871,7 @@ def main():
         swag_dir = args.swag_dir or find_swag_proxy_dir()
         if swag_dir:
             install_swag_confs(swag_dir)
+            connect_containers_to_swag()
         else:
             print("Could not find SWAG proxy-confs directory.")
             print("Use --swag-dir to specify the path manually.")
