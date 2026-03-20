@@ -1,13 +1,4 @@
 services:
-  analytics:
-    ports: !reset null
-
-  kong:
-    ports: !reset null
-
-  supavisor:
-    ports: !reset null
-
   unsloth:
     ports:
       - 8888:8888

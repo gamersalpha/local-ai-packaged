@@ -379,7 +379,7 @@ def stop_existing_containers(profile=None):
         print("Docker compose down returned a non-zero exit code. Continuing.")
 
 
-def build_compose_base(profile=None, environment=None):
+def build_compose_base(profile=None, environment=None, supabase_enabled=False):
     """Build the base docker compose command with profile and environment."""
     cmd = ["docker", "compose", "-p", "localai"]
     if profile and profile != "none":
@@ -389,14 +389,16 @@ def build_compose_base(profile=None, environment=None):
         cmd.extend(["-f", "docker-compose.override.private.yml"])
     elif environment == "public":
         cmd.extend(["-f", "docker-compose.override.public.yml"])
+        if supabase_enabled and os.path.exists("docker-compose.override.public.supabase.yml"):
+            cmd.extend(["-f", "docker-compose.override.public.supabase.yml"])
     return cmd
 
 
-def start_local_ai(profile=None, environment=None, services=None):
+def start_local_ai(profile=None, environment=None, services=None, supabase_enabled=False):
     """Start local AI stack service by service, collecting results."""
     print("\nStarting Local AI stack...")
 
-    base_cmd = build_compose_base(profile, environment)
+    base_cmd = build_compose_base(profile, environment, supabase_enabled=supabase_enabled)
 
     # If "all", launch everything at once first (fast path)
     if not services or "all" in services:
@@ -792,7 +794,7 @@ def main():
 
     # 9. Start Local AI stack
     try:
-        start_local_ai(args.profile, args.environment, args.services)
+        start_local_ai(args.profile, args.environment, args.services, supabase_enabled=not args.no_supabase)
     except Exception as e:
         print(f"\nDeployment encountered an error: {e}")
         print("Check the deployment report above for details.")
