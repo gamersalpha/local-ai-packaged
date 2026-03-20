@@ -146,7 +146,7 @@ def prompt_for(varname, current_value, auto_accept=False, regen_sensitive=False,
 # -------------------------
 SERVICE_SUBDOMAIN_DEFAULTS = {
     "N8N_HOSTNAME": "n8n",
-    "WEBUI_HOSTNAME": "openwebui",
+    "WEBUI_HOSTNAME": "open-webui",
     "FLOWISE_HOSTNAME": "flowise",
     "SUPABASE_HOSTNAME": "supabase",
     "LANGFUSE_HOSTNAME": "langfuse",
