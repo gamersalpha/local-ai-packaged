@@ -153,6 +153,8 @@ SERVICE_SUBDOMAIN_DEFAULTS = {
     "NEO4J_HOSTNAME": "neo4j",
     "SEARXNG_HOSTNAME": "searxng",
     "OLLAMA_HOSTNAME": "ollama",
+    "QDRANT_HOSTNAME": "qdrant",
+    "UNSLOTH_HOSTNAME": "unsloth",
 }
 
 
@@ -308,16 +310,37 @@ def main():
             print(f"⚠️  Erreur Docker Compose : {e}")
 
     # 🌐 Affichage des services
+    # Lire le .env généré pour détecter BASE_DOMAIN et les hostnames
+    env_vars = {}
+    if os.path.exists(args.output):
+        with open(args.output, "r", encoding="utf-8") as f:
+            for ln in f:
+                m = VAR_LINE_RE.match(ln.strip())
+                if m:
+                    env_vars[m.group(1)] = m.group(2).strip().strip('"').strip("'")
+
+    base_domain = env_vars.get("BASE_DOMAIN", "").strip()
     ip = get_server_ip()
+
+    def svc_url(hostname_var, subdomain, port):
+        """Retourne l'URL du service : domaine si BASE_DOMAIN défini, sinon IP:port."""
+        host = env_vars.get(hostname_var, "").strip()
+        if host:
+            return f"https://{host}"
+        if base_domain:
+            return f"https://{subdomain}.{base_domain}"
+        return f"http://{ip}:{port}"
+
     print("\n🌐 Services disponibles :")
-    print(f"  🧠 Ollama      : http://{ip}:11434")
-    print(f"  ⚙️  n8n         : http://{ip}:5678")
-    print(f"  💬 Open WebUI  : http://{ip}:8080")
-    print(f"  🌊 Flowise     : http://{ip}:3001")
-    print(f"  📦 Qdrant      : http://{ip}:6333")
-    print(f"  🔍 SearXNG     : http://{ip}:8081")
-    print(f"  📊 Langfuse    : http://{ip}:3000")
-    print(f"  🕸️  Neo4j       : http://{ip}:7474")
+    print(f"  🧠 Ollama      : {svc_url('OLLAMA_HOSTNAME', 'ollama', 11434)}")
+    print(f"  ⚙️  n8n         : {svc_url('N8N_HOSTNAME', 'n8n', 5678)}")
+    print(f"  💬 Open WebUI  : {svc_url('WEBUI_HOSTNAME', 'openwebui', 8080)}")
+    print(f"  🌊 Flowise     : {svc_url('FLOWISE_HOSTNAME', 'flowise', 3001)}")
+    print(f"  📦 Qdrant      : {svc_url('QDRANT_HOSTNAME', 'qdrant', 6333)}")
+    print(f"  🔍 SearXNG     : {svc_url('SEARXNG_HOSTNAME', 'searxng', 8081)}")
+    print(f"  📊 Langfuse    : {svc_url('LANGFUSE_HOSTNAME', 'langfuse', 3000)}")
+    print(f"  🕸️  Neo4j       : {svc_url('NEO4J_HOSTNAME', 'neo4j', 7474)}")
+    print(f"  🧬 Unsloth     : {svc_url('UNSLOTH_HOSTNAME', 'unsloth', 8888)}")
     print(f"  🐘 PostgreSQL  : {ip}:5433")
 
 
