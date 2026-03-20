@@ -24,9 +24,16 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+x-timezone: &default-timezone
+  TZ: ${TZ:-Europe/Paris}
+
+x-timezone-volumes: &timezone-volumes
+  - /etc/localtime:/etc/localtime:ro
+
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
   environment:
+    - TZ=${TZ:-Europe/Paris}
     - DB_TYPE=postgresdb
     - DB_POSTGRESDB_HOST=postgres
     - DB_POSTGRESDB_USER=postgres
@@ -47,10 +54,13 @@ x-ollama: &service-ollama
   image: ollama/ollama:latest
   container_name: ollama
   restart: unless-stopped
+  environment:
+    <<: *default-timezone
   expose:
     - 11434/tcp
   volumes:
     - ollama_storage:/root/.ollama
+    - /etc/localtime:/etc/localtime:ro
   logging: *default-logging
 
 x-init-ollama: &init-ollama
@@ -81,12 +91,14 @@ services:
     expose:
       - 5432/tcp
     environment:
+      <<: *default-timezone
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - /etc/localtime:/etc/localtime:ro
     logging: *default-logging
 
   redis:
@@ -98,10 +110,13 @@ services:
         --loglevel warning
         --requirepass ${REDIS_AUTH:-LOCALONLYREDIS}
     restart: unless-stopped
+    environment:
+      <<: *default-timezone
     expose:
       - 6379/tcp
     volumes:
       - valkey-data:/data
+      - /etc/localtime:/etc/localtime:ro
     cap_drop:
       - ALL
     cap_add:
@@ -177,7 +192,9 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - open-webui:/app/backend/data
+      - /etc/localtime:/etc/localtime:ro
     environment:
+      <<: *default-timezone
       ENABLE_RAG_WEB_SEARCH: True
       RAG_WEB_SEARCH_ENGINE: "searxng"
       RAG_WEB_SEARCH_RESULT_COUNT: 3
@@ -255,6 +272,7 @@ services:
     expose:
       - 3001/tcp
     environment:
+        - TZ=${TZ:-Europe/Paris}
         - PORT=3001
         - FLOWISE_USERNAME=${FLOWISE_USERNAME}
         - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
@@ -262,6 +280,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
         - ~/.flowise:/root/.flowise
+        - /etc/localtime:/etc/localtime:ro
     entrypoint: /bin/sh -c "sleep 3; flowise start"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001 || exit 1"]
@@ -277,11 +296,14 @@ services:
     image: qdrant/qdrant:latest
     container_name: qdrant
     restart: unless-stopped
+    environment:
+      <<: *default-timezone
     expose:
       - 6333/tcp
       - 6334/tcp
     volumes:
       - qdrant_storage:/qdrant/storage
+      - /etc/localtime:/etc/localtime:ro
     logging: *default-logging
 
   neo4j:
@@ -292,11 +314,13 @@ services:
         - ./neo4j/config:/config
         - ./neo4j/data:/data
         - ./neo4j/plugins:/plugins
+        - /etc/localtime:/etc/localtime:ro
     expose:
       - 7473/tcp
       - 7474/tcp
       - 7687/tcp
     environment:
+        - TZ=${TZ:-Europe/Paris}
         - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
     restart: unless-stopped
     healthcheck:
@@ -322,7 +346,7 @@ services:
       - BASE_URL=${SEARXNG_HOSTNAME}
       - INSTANCE_NAME=Mon SearXNG
       - SEARXNG_TRUSTED_PROXIES=172.16.0.0/12,192.168.0.0/16,10.0.0.0/8
-      - TZ=Europe/Paris
+      - TZ=${TZ:-Europe/Paris}
       - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}
       - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
     cap_drop:
@@ -339,6 +363,8 @@ services:
     image: langfuse/langfuse-worker:3
     container_name: langfuse-worker
     restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     depends_on: &langfuse-depends-on
       postgres:
         condition: service_healthy
@@ -351,6 +377,7 @@ services:
     expose:
      - 3030/tcp
     environment: &langfuse-worker-env
+      TZ: ${TZ:-Europe/Paris}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/langfuse
       SALT: ${LANGFUSE_SALT}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
@@ -400,6 +427,8 @@ services:
     container_name: langfuse-web
     restart: unless-stopped
     depends_on: *langfuse-depends-on
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     expose:
       - 3000/tcp
     environment:
@@ -427,12 +456,14 @@ services:
       - 9000/tcp
       - 9009/tcp
     environment:
+      <<: *default-timezone
       CLICKHOUSE_DB: default
       CLICKHOUSE_USER: clickhouse
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
     volumes:
       - langfuse_clickhouse_data:/var/lib/clickhouse
       - langfuse_clickhouse_logs:/var/log/clickhouse-server
+      - /etc/localtime:/etc/localtime:ro
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://127.0.0.1:8123/ping || exit 1
       interval: 5s
@@ -451,10 +482,12 @@ services:
       - 9000/tcp
       - 9001/tcp
     environment:
+      <<: *default-timezone
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - langfuse_minio_data:/data
+      - /etc/localtime:/etc/localtime:ro
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 1s
@@ -474,6 +507,7 @@ services:
       - 8888/tcp
       - 8000/tcp
     environment:
+      - TZ=${TZ:-Europe/Paris}
       - JUPYTER_PASSWORD=${UNSLOTH_JUPYTER_PASSWORD:-unsloth}
     volumes:
       - unsloth_work:/workspace/work
