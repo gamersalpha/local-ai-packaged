@@ -199,11 +199,23 @@ Set `BASE_DOMAIN` in your `.env` to auto-derive all service hostnames:
 BASE_DOMAIN=home.example.com
 ```
 
-This generates:
-- `n8n.home.example.com`
-- `openwebui.home.example.com`
-- `flowise.home.example.com`
-- etc.
+This generates the following subdomains (à créer en tant que CNAME ou A record dans votre DNS) :
+
+| Sous-domaine | Service | Port interne |
+|---|---|---|
+| `hub.BASE_DOMAIN` | **Landing page** (dashboard) | 8090 |
+| `n8n.BASE_DOMAIN` | n8n | 5678 |
+| `openwebui.BASE_DOMAIN` | Open WebUI | 8080 |
+| `flowise.BASE_DOMAIN` | Flowise | 3001 |
+| `langfuse.BASE_DOMAIN` | Langfuse | 3000 |
+| `searxng.BASE_DOMAIN` | SearXNG | 8081 |
+| `ollama.BASE_DOMAIN` | Ollama | 11434 |
+| `qdrant.BASE_DOMAIN` | Qdrant | 6333 |
+| `neo4j.BASE_DOMAIN` | Neo4j | 7474 |
+| `unsloth.BASE_DOMAIN` | Unsloth | 8888 |
+| `supabase.BASE_DOMAIN` | Supabase | 8000 |
+
+> **Exemple :** avec `BASE_DOMAIN=home.example.com`, créez un wildcard DNS `*.home.example.com` pointant vers l'IP de votre serveur, ou ajoutez chaque sous-domaine individuellement.
 
 Override individual services:
 ```bash
@@ -319,7 +331,7 @@ Databases are auto-created on first start via `postgres/init/01-create-databases
 
 ### 🔜 Planned Features
 
-- [ ] **Landing page dashboard** — Page d'accueil Cyberpunk 2077 avec icônes, descriptions et liens dynamiques vers chaque service installé (localhost ou domaine)
+- [x] **Landing page dashboard** — Page d'accueil Cyberpunk 2077 avec icônes, descriptions et liens dynamiques vers chaque service installé (`hub.BASE_DOMAIN` / port 8090)
 - [ ] **Environment-based versioning** — Mode `prod` (versions pinnées) vs `recette` (latest) avec granularité par service. Permettre `--env prod` / `--env recette` dans `start_services.py`
 - [ ] **Supabase rework** — Refaire l'intégration Supabase pour plus de fiabilité et de modularité (clone, .env partagé, sélection de services)
 - [ ] **Monitoring & alerting** — Intégration Prometheus/Grafana pour surveiller l'état des services
