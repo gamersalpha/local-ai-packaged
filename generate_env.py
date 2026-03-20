@@ -373,7 +373,7 @@ def main():
     print(svc_line("🌊", "Flowise    ", "FLOWISE_HOSTNAME", "flowise", 3001))
     print(svc_line("📦", "Qdrant     ", "QDRANT_HOSTNAME", "qdrant", 6333))
     print(svc_line("🔍", "SearXNG    ", "SEARXNG_HOSTNAME", "searxng", 8081))
-    print(svc_line("📊", "Langfuse   ", "LANGFUSE_HOSTNAME", "langfuse", 3000))
+    print(svc_line("📊", "Langfuse   ", "LANGFUSE_HOSTNAME", "langfuse", 3100))
     print(svc_line("🕸️ ", "Neo4j      ", "NEO4J_HOSTNAME", "neo4j", 7474))
     print(svc_line("🧬", "Unsloth    ", "UNSLOTH_HOSTNAME", "unsloth", 8888))
     print(svc_line("🏠", "Hub        ", "HUB_HOSTNAME", "hub", 8090))

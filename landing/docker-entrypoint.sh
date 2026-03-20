@@ -15,7 +15,7 @@ window.__CONFIG__ = {
     flowise:   { url: "${FLOWISE_HOSTNAME:+https://$FLOWISE_HOSTNAME}", local: "http://${IP}:3001" },
     qdrant:    { url: "${QDRANT_HOSTNAME:+https://$QDRANT_HOSTNAME}",   local: "http://${IP}:6333" },
     neo4j:     { url: "${NEO4J_HOSTNAME:+https://$NEO4J_HOSTNAME}",     local: "http://${IP}:7474" },
-    langfuse:  { url: "${LANGFUSE_HOSTNAME:+https://$LANGFUSE_HOSTNAME}", local: "http://${IP}:3000" },
+    langfuse:  { url: "${LANGFUSE_HOSTNAME:+https://$LANGFUSE_HOSTNAME}", local: "http://${IP}:3100" },
     searxng:   { url: "${SEARXNG_HOSTNAME:+https://$SEARXNG_HOSTNAME}", local: "http://${IP}:8081" },
     unsloth:   { url: "${UNSLOTH_HOSTNAME:+https://$UNSLOTH_HOSTNAME}", local: "http://${IP}:8888" },
     supabase:  { url: "${SUPABASE_HOSTNAME:+https://$SUPABASE_HOSTNAME}", local: "http://${IP}:8000" },
