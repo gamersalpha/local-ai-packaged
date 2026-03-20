@@ -322,25 +322,33 @@ def main():
     base_domain = env_vars.get("BASE_DOMAIN", "").strip()
     ip = get_server_ip()
 
-    def svc_url(hostname_var, subdomain, port):
-        """Retourne l'URL du service : domaine si BASE_DOMAIN défini, sinon IP:port."""
+    def svc_domain(hostname_var, subdomain):
+        """Retourne l'URL domaine si BASE_DOMAIN défini, sinon None."""
         host = env_vars.get(hostname_var, "").strip()
         if host:
             return f"https://{host}"
         if base_domain:
             return f"https://{subdomain}.{base_domain}"
-        return f"http://{ip}:{port}"
+        return None
+
+    def svc_line(emoji, name, hostname_var, subdomain, port):
+        """Affiche une ligne : domaine + IP:port, ou juste IP:port."""
+        local = f"http://{ip}:{port}"
+        domain = svc_domain(hostname_var, subdomain)
+        if domain:
+            return f"  {emoji} {name}: {domain}  —  {local}"
+        return f"  {emoji} {name}: {local}"
 
     print("\n🌐 Services disponibles :")
-    print(f"  🧠 Ollama      : {svc_url('OLLAMA_HOSTNAME', 'ollama', 11434)}")
-    print(f"  ⚙️  n8n         : {svc_url('N8N_HOSTNAME', 'n8n', 5678)}")
-    print(f"  💬 Open WebUI  : {svc_url('WEBUI_HOSTNAME', 'openwebui', 8080)}")
-    print(f"  🌊 Flowise     : {svc_url('FLOWISE_HOSTNAME', 'flowise', 3001)}")
-    print(f"  📦 Qdrant      : {svc_url('QDRANT_HOSTNAME', 'qdrant', 6333)}")
-    print(f"  🔍 SearXNG     : {svc_url('SEARXNG_HOSTNAME', 'searxng', 8081)}")
-    print(f"  📊 Langfuse    : {svc_url('LANGFUSE_HOSTNAME', 'langfuse', 3000)}")
-    print(f"  🕸️  Neo4j       : {svc_url('NEO4J_HOSTNAME', 'neo4j', 7474)}")
-    print(f"  🧬 Unsloth     : {svc_url('UNSLOTH_HOSTNAME', 'unsloth', 8888)}")
+    print(svc_line("🧠", "Ollama     ", "OLLAMA_HOSTNAME", "ollama", 11434))
+    print(svc_line("⚙️ ", "n8n        ", "N8N_HOSTNAME", "n8n", 5678))
+    print(svc_line("💬", "Open WebUI ", "WEBUI_HOSTNAME", "openwebui", 8080))
+    print(svc_line("🌊", "Flowise    ", "FLOWISE_HOSTNAME", "flowise", 3001))
+    print(svc_line("📦", "Qdrant     ", "QDRANT_HOSTNAME", "qdrant", 6333))
+    print(svc_line("🔍", "SearXNG    ", "SEARXNG_HOSTNAME", "searxng", 8081))
+    print(svc_line("📊", "Langfuse   ", "LANGFUSE_HOSTNAME", "langfuse", 3000))
+    print(svc_line("🕸️ ", "Neo4j      ", "NEO4J_HOSTNAME", "neo4j", 7474))
+    print(svc_line("🧬", "Unsloth    ", "UNSLOTH_HOSTNAME", "unsloth", 8888))
     print(f"  🐘 PostgreSQL  : {ip}:5433")
 
 
